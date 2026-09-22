@@ -1,0 +1,17 @@
+{
+    "name": "@mail2telegram/shared",
+    "version": "2.0.0",
+    "private": true,
+    "type": "module",
+    "description": "HTTP contract types shared by the worker and the Telegram Mini App",
+    "exports": {
+        ".": {
+            "types": "./src/index.ts",
+            "default": "./src/index.ts"
+        }
+    },
+    "types": "./src/index.ts",
+    "files": [
+        "src"
+    ]
+}

@@ -1,0 +1,13 @@
+{
+    "extends": "../../tsconfig.json",
+    "compilerOptions": {
+        // The suite spans two runtimes: the `*.test.ts` units and
+        // `vitest.config.mts` run on Node, while the `test/**/*.pool.test.ts`
+        // cases run on Miniflare/workerd and use the `cloudflare:test` module.
+        // Both type roots are therefore needed, and unlike the worker program
+        // they legitimately overlap here, so the base `skipLibCheck` stays on.
+        "lib": ["ESNext"],
+        "types": ["node", "@cloudflare/workers-types"]
+    },
+    "include": ["src/**/*.test.ts", "src/test.ts", "test", "vitest.config.mts"]
+}

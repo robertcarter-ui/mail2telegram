@@ -1,0 +1,24 @@
+# Runtime values for mail2telegram. `wrangler dev` reads this file as `.dev.vars`
+# (gitignored); the Deploy to Cloudflare button shows the same keys as secrets
+# to fill in during deployment. Copy to `.dev.vars` for local development.
+
+# Required: Telegram bot token from @BotFather.
+TELEGRAM_TOKEN=
+
+# Required: destination chat ids (comma separated). Get yours from @userinfobot.
+TELEGRAM_ID=
+
+# Optional: password for opening the Mini App in a plain browser outside Telegram.
+# Leave empty to allow only the Telegram Mini App.
+WEB_PASSWORD=
+
+# Optional: Resend API key, enables replying to email from Telegram / the Mini App.
+RESEND_API_KEY=
+
+# Optional: OpenAI-compatible API key used as the default summary backend.
+OPENAI_API_KEY=
+
+# Optional: worker host used for webhook and Mini App links. When unset, the
+# worker discovers its own host during /init, so most deployments leave this
+# empty. Set it only to serve the Mini App from a different domain.
+# DOMAIN=

@@ -1,0 +1,1743 @@
+@import 'tailwindcss';
+@import 'konsta/theme.css';
+
+/* Konsta's theme.css uses @source paths relative to itself, which no longer
+   resolve once it is @import-ed. Point Tailwind at the package explicitly so
+   every `k-*` component class and utility it references is generated. */
+@source "../../node_modules/konsta/react";
+@source "../../node_modules/konsta/shared";
+@source "../../node_modules/konsta/styles";
+
+/* ------------------------------------------------------------------ tokens */
+
+:root {
+    color-scheme: light;
+    --ios-blue: #007aff;
+    --ios-gray: #8e8e93;
+    --ios-gray-2: #c7c7cc;
+    --ios-text: #000000;
+    --ios-separator: rgba(60, 60, 67, 0.29);
+    --ios-grouped-bg: #f2f2f7;
+    --ios-surface: #ffffff;
+    --ios-bar: #f9f9f9;
+
+    --app-font: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, 'Helvetica Neue', Arial, sans-serif;
+    --tg-viewport-height: 100vh;
+    --tg-viewport-stable-height: 100vh;
+}
+
+.dark {
+    color-scheme: dark;
+    --ios-blue: #0a84ff;
+    --ios-gray: #8e8e93;
+    --ios-gray-2: #48484a;
+    --ios-text: #ffffff;
+    --ios-separator: rgba(84, 84, 88, 0.6);
+    --ios-grouped-bg: #000000;
+    --ios-surface: #1c1c1e;
+    --ios-bar: #161616;
+}
+
+/* Fullscreen support: Telegram exposes the device safe area through viewport
+   CSS variables, which is the only reliable source once the Mini App runs in
+   fullscreen and env() insets collapse. Take whichever is larger so the header
+   and tab bar stay clear of the notch and the home indicator. */
+.k-app.safe-areas {
+    --k-safe-area-top: max(env(safe-area-inset-top, 0px), var(--tg-viewport-safe-area-inset-top, 0px));
+    --k-safe-area-right: max(env(safe-area-inset-right, 0px), var(--tg-viewport-safe-area-inset-right, 0px));
+    --k-safe-area-bottom: max(env(safe-area-inset-bottom, 0px), var(--tg-viewport-safe-area-inset-bottom, 0px));
+    --k-safe-area-left: max(env(safe-area-inset-left, 0px), var(--tg-viewport-safe-area-inset-left, 0px));
+}
+
+html,
+body,
+#root {
+    height: 100%;
+}
+
+/* Explicit colors: without these, `color-scheme: light dark` lets the browser
+   pick a UA default (white text) that can disagree with our own palette. */
+html {
+    background: var(--ios-grouped-bg);
+}
+
+body {
+    margin: 0;
+    font-family: var(--app-font);
+    color: var(--ios-text);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    overscroll-behavior-y: none;
+    background: var(--ios-grouped-bg);
+    /* Native app feel: no gray tap flash and no double-tap zoom delay. */
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+}
+
+/* Keyboard focus ring only for keyboard users; touches and clicks keep the
+   clean native look. */
+:focus {
+    outline: none;
+}
+
+:focus-visible {
+    outline: 2px solid var(--ios-blue);
+    outline-offset: -2px;
+}
+
+/* Invisible hit-area expansion for small icon buttons, without layout shift. */
+.icon-hit {
+    position: relative;
+}
+
+.icon-hit::before {
+    content: '';
+    position: absolute;
+    inset: -10px;
+}
+
+/* Press feedback shared by bar buttons: iOS dims the control, never rescales
+   it, so layout bounds stay stable. */
+.bar-button {
+    transition: opacity 0.15s ease;
+}
+
+.bar-button:active:not(:disabled) {
+    opacity: 0.4;
+}
+
+/* Konsta App wrapper fills the Mini App viewport.
+   Height is based on the document chain (html/body/#root are all 100%) rather
+   than on --tg-viewport-stable-height: some desktop clients report that variable
+   as 0 or omit it, which previously collapsed the shell so only the tab bar
+   rendered. */
+.k-app {
+    height: 100%;
+    min-height: 100vh;
+    min-height: 100dvh;
+    background: var(--ios-grouped-bg);
+}
+
+/* ------------------------------------------------------------------ navbar */
+
+/* Flat navigation bar: solid background, no frosted glass and no gradient
+   fade. The compact title is centered by Konsta's `centerTitle`. */
+.ios-navbar {
+    background: var(--ios-bar);
+}
+
+/* Konsta layers a backdrop-blur strip and a gradient strip behind the bar. */
+.ios-navbar > div.absolute {
+    display: none !important;
+}
+
+.ios-navbar::after {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    bottom: 0;
+    height: 0.5px;
+    background: var(--ios-separator);
+}
+
+.ios-navbar .hairline-b::after {
+    display: none;
+}
+
+/* Konsta gives the Toggle a frosted "glass thumb" press highlight. Flatten it. */
+.k-toggle .shadow-ios-light-glass-thumb,
+.k-toggle .dark\:shadow-ios-dark-glass-thumb {
+    --tw-shadow: 0 0 #0000 !important;
+    box-shadow: none !important;
+    background: transparent !important;
+}
+
+/* The trailing slot is wrapped in Konsta's Glass. Clear the backdrop-blur
+   variables as well so the utility resolves to no filter regardless of how the
+   minifier orders the prefixed declarations. */
+.ios-navbar .k-glass {
+    --tw-backdrop-blur: initial;
+    --tw-backdrop-brightness: initial;
+    --tw-backdrop-contrast: initial;
+    --tw-backdrop-grayscale: initial;
+    --tw-backdrop-hue-rotate: initial;
+    --tw-backdrop-invert: initial;
+    --tw-backdrop-opacity: initial;
+    --tw-backdrop-saturate: initial;
+    --tw-backdrop-sepia: initial;
+    background: transparent !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+/* ------------------------------------------------------------------ layout */
+
+.app-shell {
+    display: flex;
+    flex-direction: column;
+    /* Never use --tg-viewport-stable-height here: it can be 0 on desktop
+       clients, which collapses the content area and leaves only the tab bar. */
+    height: 100%;
+    min-height: 0;
+    background: var(--ios-grouped-bg);
+}
+
+/* Phone shell: constrains the page so only the inner list scrolls and the tab
+   bar always sits below the content instead of overlapping it. */
+.app-shell__content {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.app-shell__content > .split-column {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.page-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    background: var(--ios-grouped-bg);
+}
+
+/* iPadOS two-column split view: mail list on the left, detail on the right. */
+.split-view {
+    display: grid;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+}
+
+.split-view--two {
+    grid-template-columns: 340px minmax(0, 1fr);
+    overflow: hidden;
+}
+
+.split-column {
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    background: var(--ios-surface);
+    border-right: 0.5px solid var(--ios-separator);
+}
+
+.split-column:last-child {
+    border-right: none;
+}
+
+/* Big Settings button pinned to the bottom of the list column. */
+.master-pane__footer {
+    flex: 0 0 auto;
+    border-top: 0.5px solid var(--ios-separator);
+    padding: 10px 10px calc(10px + var(--k-safe-area-bottom, env(safe-area-inset-bottom, 0px)));
+}
+
+.master-pane__settings {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 13px 10px;
+    border: 0;
+    border-radius: 12px;
+    background: var(--ios-blue);
+    color: #fff;
+    font-size: 17px;
+    font-weight: 600;
+    font-family: inherit;
+    text-align: center;
+    cursor: pointer;
+}
+
+.master-pane__settings:active {
+    opacity: 0.7;
+}
+
+.master-pane__settings.is-active {
+    filter: brightness(0.85);
+}
+
+.reader-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: 32px;
+    text-align: center;
+    color: var(--ios-gray);
+    font-size: 15px;
+    background: var(--ios-grouped-bg);
+}
+
+/* -------------------------------------------------------------- mailbox list */
+
+.mailbox-list {
+    padding: 0;
+}
+
+.mailbox-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 16px;
+    cursor: pointer;
+    background: var(--ios-surface);
+}
+
+.mailbox-row:active {
+    background: rgba(120, 120, 128, 0.18);
+}
+
+.mailbox-row + .mailbox-row {
+    border-top: 0.5px solid var(--ios-separator);
+    margin-top: 0;
+}
+
+.mailbox-row__icon {
+    flex: 0 0 auto;
+    width: 29px;
+    height: 29px;
+    border-radius: 7px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+}
+
+.mailbox-row__icon svg {
+    width: 17px;
+    height: 17px;
+}
+
+.mailbox-row__label {
+    flex: 1 1 auto;
+    font-size: 17px;
+    color: var(--ios-text, #000);
+}
+
+.mailbox-row__count {
+    font-size: 17px;
+    color: var(--ios-gray);
+    min-width: 12px;
+    text-align: right;
+}
+
+.mailbox-row__chevron {
+    flex: 0 0 auto;
+    color: var(--ios-gray-2);
+}
+
+.dark .mailbox-row__label {
+    color: #fff;
+}
+
+/* -------------------------------------------------------------- message list */
+
+/* Swipeable wrapper: the delete action sits underneath, the row slides over it.
+   The wrapper is painted in the surface colour rather than the action's red, so
+   a sub-pixel seam at the row edges shows the list colour instead of red. The
+   action button paints its own red, so an open row still looks right. */
+.swipe-row {
+    position: relative;
+    overflow: hidden;
+    background: var(--ios-surface);
+}
+
+.swipe-row__action {
+    position: absolute;
+    inset-block: 0;
+    right: 0;
+    width: 88px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    border: 0;
+    background: #ff3b30;
+    color: #fff;
+    font-family: inherit;
+    font-size: 11px;
+    cursor: pointer;
+}
+
+.swipe-row__content {
+    position: relative;
+    background: var(--ios-surface);
+    touch-action: pan-y;
+}
+
+/* Promote the row only for the duration of a drag. Keeping every row on its own
+   compositor layer made the browser paint rows slightly out of step with the red
+   delete action underneath during momentum scrolling, which showed as the button
+   flashing through; it also cost one layer per row. */
+.swipe-row__content--dragging {
+    transition: none;
+    will-change: transform;
+}
+
+.swipe-row__content:not(.swipe-row__content--dragging) {
+    transition: transform 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+.message-row {
+    display: flex;
+    gap: 8px;
+    padding: 10px 16px 12px 16px;
+    cursor: pointer;
+    position: relative;
+    background: var(--ios-surface);
+    user-select: none;
+}
+
+/* iOS Mail highlight: instant on touch-down, no layout change. */
+.message-row:active {
+    background: rgba(120, 120, 128, 0.18);
+}
+
+/* Opened message stays highlighted in system blue, like iPadOS Mail. */
+.message-row--selected {
+    background: var(--ios-blue);
+}
+
+.message-row--selected:active {
+    background: #0063d1;
+}
+
+.message-row--selected .message-row__sender,
+.message-row--selected .message-row__subject {
+    color: #fff;
+}
+
+.message-row--selected .message-row__time,
+.message-row--selected .message-row__preview {
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.message-row--selected::after {
+    display: none;
+}
+
+.message-row::after {
+    content: '';
+    position: absolute;
+    left: 16px;
+    right: 0;
+    bottom: 0;
+    height: 0.5px;
+    background: var(--ios-separator);
+}
+
+.message-row--unread .message-row__sender {
+    font-weight: 600;
+}
+
+.message-row__dot {
+    flex: 0 0 auto;
+    width: 10px;
+    padding-top: 6px;
+    display: flex;
+    justify-content: flex-start;
+}
+
+.message-row__dot span {
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    background: var(--ios-blue);
+}
+
+.message-row__dot--read span {
+    background: transparent;
+}
+
+.message-row__body {
+    flex: 1 1 auto;
+    /* min-width: 0 lets the children shrink, which is what makes the ellipsis
+       work inside a flex row. */
+    min-width: 0;
+    overflow: hidden;
+}
+
+.message-row__top {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    min-width: 0;
+}
+
+.message-row__sender {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 17px;
+    line-height: 22px;
+    color: var(--ios-text, #000);
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.message-row__time {
+    flex: 0 0 auto;
+    font-size: 15px;
+    color: var(--ios-gray);
+    display: flex;
+    align-items: center;
+    gap: 3px;
+}
+
+/* Subject and preview must be block boxes: `text-overflow: ellipsis` does not
+   apply to inline boxes, which previously let a long subject overflow the row. */
+.message-row__subject {
+    display: block;
+    max-width: 100%;
+    margin-top: 1px;
+    font-size: 15px;
+    line-height: 20px;
+    color: var(--ios-text, #000);
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.message-row__preview {
+    margin-top: 1px;
+    font-size: 15px;
+    line-height: 20px;
+    color: var(--ios-gray);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    max-width: 100%;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+}
+
+.message-row__star {
+    color: #ff9500;
+    margin-right: 2px;
+}
+
+.dark .message-row__sender,
+.dark .message-row__subject {
+    color: #fff;
+}
+
+/* Search + filter header above the list. */
+.list-header {
+    background: var(--ios-surface);
+    border-bottom: 0.5px solid var(--ios-separator);
+}
+
+.list-header .k-searchbar {
+    padding-inline: 0;
+}
+
+/* ------------------------------------------------------------ empty state */
+
+/* iOS Mail style empty mailbox: large centered secondary title. */
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 100%;
+    padding: 32px;
+    text-align: center;
+    color: var(--ios-gray);
+}
+
+.empty-state__title {
+    font-size: 21px;
+    line-height: 26px;
+    font-weight: 600;
+}
+
+.empty-state__subtitle {
+    font-size: 15px;
+    line-height: 20px;
+}
+
+/* Large tap target for inline "Try Again" style actions. */
+.text-button {
+    padding: 10px 12px;
+    margin: -6px 0;
+    font-size: 17px;
+    border: 0;
+    background: none;
+    color: var(--ios-blue);
+    font-family: inherit;
+    cursor: pointer;
+}
+
+/* --------------------------------------------------------- pull to refresh */
+
+.ptr-spinner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+/* Height animates on release; while dragging it follows the finger directly. */
+.ptr-spinner--settle {
+    transition: height 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+.ptr-spinner__icon {
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+
+.ptr-spinner__icon--visible {
+    opacity: 1;
+}
+
+.ptr-content {
+    will-change: transform;
+}
+
+.ptr-content--dragging {
+    transition: none;
+}
+
+.ptr-content:not(.ptr-content--dragging) {
+    transition: transform 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+/* -------------------------------------------------------------- reader */
+
+.reader {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    background: var(--ios-surface);
+}
+
+/* Keep the end of the message clear of the floating action bar. */
+.reader__scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding-bottom: calc(96px + var(--k-safe-area-bottom, env(safe-area-inset-bottom, 0px)));
+}
+
+.reader__head {
+    padding: 12px 16px;
+    background: var(--ios-surface);
+}
+
+.reader__subject {
+    margin: 0;
+    font-size: 17px;
+    line-height: 23px;
+    font-weight: 600;
+    color: var(--ios-text, #000);
+}
+
+.reader__from {
+    margin-top: 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.reader__avatar {
+    flex: 0 0 auto;
+    width: 40px;
+    height: 40px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 17px;
+    font-weight: 500;
+    color: #fff;
+    background: var(--ios-gray);
+}
+
+.reader__from-main {
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.reader__from-name {
+    font-size: 16px;
+    color: var(--ios-text, #000);
+}
+
+.reader__from-addr {
+    font-size: 13px;
+    color: var(--ios-gray);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.reader__date {
+    flex: 0 0 auto;
+    font-size: 13px;
+    color: var(--ios-gray);
+    text-align: right;
+}
+
+.reader__to {
+    margin-top: 10px;
+    font-size: 13px;
+    line-height: 18px;
+    color: var(--ios-gray);
+    overflow-wrap: anywhere;
+}
+
+.reader__frame {
+    display: block;
+    width: 100%;
+    min-height: 60vh;
+    border: 0;
+    background: transparent;
+}
+
+.reader__text {
+    padding: 16px;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    font-size: 16px;
+    line-height: 1.5;
+    color: var(--ios-text, #000);
+}
+
+.reader__section-title {
+    padding: 16px 16px 6px;
+    font-size: 13px;
+    color: var(--ios-gray);
+    text-transform: uppercase;
+}
+
+/* Floating action bar in the message view, styled after iOS Mail: a pill with
+   the primary actions and a circular ellipsis button hover over the content on
+   a frosted fill — there is no toolbar strip behind them. The container lets
+   taps fall through so content stays scrollable/tappable in the gaps. */
+.ios-toolbar {
+    position: absolute;
+    inset-inline: 0;
+    bottom: 0;
+    pointer-events: none;
+}
+
+.ios-toolbar__inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px calc(12px + var(--k-safe-area-bottom, env(safe-area-inset-bottom, 0px)));
+}
+
+.ios-toolbar__pill,
+.ios-toolbar__more {
+    background: rgba(118, 118, 128, 0.14);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    backdrop-filter: blur(20px) saturate(1.6);
+    -webkit-backdrop-filter: blur(20px) saturate(1.6);
+    pointer-events: auto;
+}
+
+.dark .ios-toolbar__pill,
+.dark .ios-toolbar__more {
+    background: rgba(118, 118, 128, 0.22);
+    border-color: rgba(255, 255, 255, 0.09);
+}
+
+.ios-toolbar__pill {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0 8px;
+    height: 50px;
+    border-radius: 999px;
+}
+
+.ios-toolbar__more {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 50px;
+    height: 50px;
+    border: 0;
+    border-radius: 999px;
+    color: var(--ios-blue);
+    cursor: pointer;
+}
+
+.ios-toolbar__button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    background: none;
+    border: 0;
+    color: var(--ios-blue);
+    cursor: pointer;
+}
+
+.ios-toolbar__button:disabled,
+.ios-toolbar__more:disabled {
+    color: var(--ios-gray-2);
+    cursor: default;
+}
+
+.ios-toolbar__button svg,
+.ios-toolbar__more svg {
+    width: 24px;
+    height: 24px;
+}
+
+.ios-toolbar__button--danger {
+    color: #ff3b30;
+}
+
+/* Transparent full-screen layer that catches taps outside the menu. */
+.ios-toolbar__scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 30;
+    pointer-events: auto;
+}
+
+/* The popover menu anchored above the ellipsis button. */
+.ios-menu {
+    position: absolute;
+    right: 16px;
+    bottom: calc(100% + 8px);
+    z-index: 31;
+    min-width: 220px;
+    border-radius: 13px;
+    background: var(--ios-surface);
+    border: 0.5px solid var(--ios-separator);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.22);
+    overflow: hidden;
+    transform-origin: 100% 100%;
+    animation: ios-menu-in 0.16s ease;
+    pointer-events: auto;
+}
+
+@keyframes ios-menu-in {
+    from {
+        opacity: 0;
+        transform: scale(0.92);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.ios-menu__item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    min-height: 44px;
+    padding: 0 16px;
+    background: none;
+    border: 0;
+    color: var(--ios-text);
+    font-size: 17px;
+    text-align: left;
+    cursor: pointer;
+}
+
+.ios-menu__item + .ios-menu__item {
+    border-top: 0.5px solid var(--ios-separator);
+}
+
+.ios-menu__item:disabled {
+    color: var(--ios-gray-2);
+    cursor: default;
+}
+
+/* Confirmation for actions that write a persistent rule (block/trust sender). */
+.ios-menu__scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(0, 0, 0, 0.35);
+    animation: ios-menu-in 0.12s ease;
+}
+
+.ios-confirm {
+    width: 100%;
+    max-width: 320px;
+    border-radius: 14px;
+    background: var(--ios-surface);
+    border: 0.5px solid var(--ios-separator);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.28);
+    overflow: hidden;
+    text-align: center;
+}
+
+.ios-confirm__title {
+    padding: 18px 18px 0;
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--ios-text);
+}
+
+.ios-confirm__body {
+    padding: 6px 18px 18px;
+    font-size: 13px;
+    line-height: 1.45;
+    color: var(--ios-gray);
+    word-break: break-word;
+}
+
+.ios-confirm__actions {
+    display: flex;
+    border-top: 0.5px solid var(--ios-separator);
+}
+
+.ios-confirm__actions > .text-button {
+    flex: 1 1 0;
+    margin: 0;
+    padding: 12px;
+    border-radius: 0;
+}
+
+.ios-confirm__actions > .text-button + .text-button {
+    border-left: 0.5px solid var(--ios-separator);
+}
+
+.ios-confirm__actions > .text-button:disabled {
+    color: var(--ios-gray-2);
+}
+
+/* --------------------------------------------------------------- tab bar */
+
+.ios-tabbar {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: stretch;
+    padding: 4px 0 calc(4px + var(--k-safe-area-bottom, env(safe-area-inset-bottom, 0px)));
+    background: var(--ios-bar);
+    border-top: 0.5px solid var(--ios-separator);
+}
+
+.ios-tabbar__item {
+    flex: 1 1 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    background: none;
+    border: 0;
+    cursor: pointer;
+    transition: opacity 0.15s ease;
+}
+
+/* iOS tab items dim while pressed instead of moving or recoloring. */
+.ios-tabbar__item:active {
+    opacity: 0.45;
+}
+
+.ios-tabbar__badge {
+    position: absolute;
+    top: -4px;
+    right: -8px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: #ff3b30;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 18px;
+    text-align: center;
+}
+
+/* ------------------------------------------------------------- segmented */
+
+/* iOS style segmented control.
+   Konsta implements the active pill as an absolutely positioned span whose
+   offset is measured in JavaScript; that is fragile. Draw the pill on the active
+   button itself instead and hide Konsta's highlight layer. The control fills its
+   container so all options share the available width equally. */
+.ios-segmented {
+    width: 100%;
+    border-radius: 9px;
+    background: rgba(120, 120, 128, 0.16);
+    gap: 2px;
+    padding: 2px;
+}
+
+.ios-segmented > span {
+    display: none !important;
+}
+
+.ios-segmented button {
+    flex: 1 1 0;
+    min-width: 0;
+    height: 32px;
+    padding: 0 6px;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: -0.08px;
+    border-radius: 7px;
+    color: var(--ios-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ios-segmented button.k-segmented-strong-button-active {
+    background: #ffffff;
+    box-shadow:
+        0 1px 3px rgba(0, 0, 0, 0.15),
+        0 0 1px rgba(0, 0, 0, 0.06);
+    font-weight: 600;
+}
+
+.dark .ios-segmented {
+    background: rgba(120, 120, 128, 0.32);
+}
+
+.dark .ios-segmented button.k-segmented-strong-button-active {
+    background: #636366;
+    box-shadow: none;
+}
+
+/* -------------------------------------------------------------- settings */
+
+/* Native select rows show the current value inline; leave room for Konsta's
+   dropdown chevron, which is absolutely positioned at the trailing edge. */
+.k-list-input select {
+    padding-inline-end: 24px;
+    color: inherit;
+}
+
+.settings-section-title {
+    padding: 22px 16px 7px;
+    font-size: 13px;
+    color: var(--ios-gray);
+    text-transform: uppercase;
+}
+
+.settings-note {
+    padding: 7px 16px 0;
+    font-size: 13px;
+    line-height: 1.35;
+    color: var(--ios-gray);
+}
+
+.settings-hero {
+    padding: 20px 16px 8px;
+    font-size: 34px;
+    line-height: 41px;
+    font-weight: 700;
+    color: var(--ios-text, #000);
+}
+
+.k-list-item .settings-remove {
+    /* Generous tap padding around the short label keeps the 44pt target. */
+    color: #ff3b30;
+    font-size: 17px;
+    background: none;
+    border: 0;
+    padding: 10px 0 10px 16px;
+    margin: -10px 0;
+    cursor: pointer;
+    transition: opacity 0.15s ease;
+}
+
+.k-list-item .settings-remove:active {
+    opacity: 0.4;
+}
+
+/* Inline SVG baseline alignment sits the icon high; block keeps it centered. */
+.k-list-item .settings-remove svg {
+    display: block;
+}
+
+/* -------------------------------------------------------------- misc */
+
+.spin-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 0;
+}
+
+.icon-inline {
+    display: inline-flex;
+    align-items: center;
+}
+
+.k-list .group-title {
+    text-transform: none;
+}
+
+/* ------------------------------------------------------- landing page */
+
+/* Shown outside Telegram, where initData validation can never succeed.
+   Same flat token palette as the Mini App; dark mode follows the system. */
+.landing {
+    min-height: 100vh;
+    background: var(--ios-grouped-bg);
+    color: var(--ios-text);
+}
+
+.landing__wrap {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+.landing__nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 0;
+    font-size: 17px;
+    font-weight: 600;
+}
+
+.landing__nav-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--ios-blue);
+    text-decoration: none;
+    font-size: 15px;
+    font-weight: 500;
+}
+
+.landing__nav-link:active {
+    opacity: 0.4;
+}
+
+.landing__hero {
+    padding: 32px 0 8px;
+}
+
+.landing__title {
+    margin: 0 0 12px;
+    font-size: 34px;
+    line-height: 41px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+}
+
+.landing__subtitle {
+    margin: 0 0 24px;
+    font-size: 17px;
+    line-height: 25px;
+    color: var(--ios-gray);
+}
+
+.landing__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 28px;
+}
+
+/* Double-class specificity: these must keep their colors against the generic
+   `.landing a` link color below. */
+.landing .landing__button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 0 20px;
+    border-radius: 12px;
+    background: var(--ios-blue);
+    color: #fff;
+    font-size: 15px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: opacity 0.15s ease;
+}
+
+.landing .landing__button--secondary {
+    background: rgba(120, 120, 128, 0.16);
+    color: var(--ios-text);
+}
+
+.landing__button:active {
+    opacity: 0.55;
+}
+
+.landing__flow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 16px 12px;
+    background: var(--ios-surface);
+    border: 0.5px solid var(--ios-separator);
+    border-radius: 16px;
+}
+
+.landing__flow-step {
+    flex: 1 1 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 7px;
+    font-size: 12px;
+    color: var(--ios-gray);
+    text-align: center;
+}
+
+.landing__flow-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 999px;
+    background: rgba(120, 120, 128, 0.12);
+    color: var(--ios-blue);
+}
+
+.landing__flow-arrow {
+    flex: 0 0 auto;
+    color: var(--ios-gray-2);
+    font-size: 17px;
+}
+
+.landing__section-title {
+    margin: 30px 0 10px;
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--ios-gray);
+    text-transform: uppercase;
+}
+
+.landing__grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+@media (max-width: 480px) {
+    .landing__grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+.landing__card {
+    background: var(--ios-surface);
+    border: 0.5px solid var(--ios-separator);
+    border-radius: 16px;
+    padding: 16px;
+}
+
+.landing__card-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    margin-bottom: 10px;
+    border-radius: 9px;
+    background: rgba(120, 120, 128, 0.12);
+    color: var(--ios-blue);
+}
+
+.landing__card-title {
+    margin: 0 0 4px;
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.landing__card-text {
+    margin: 0;
+    font-size: 13px;
+    line-height: 18px;
+    color: var(--ios-gray);
+}
+
+.landing__step {
+    display: flex;
+    gap: 14px;
+    padding: 16px;
+    background: var(--ios-surface);
+    border: 0.5px solid var(--ios-separator);
+    border-radius: 16px;
+}
+
+.landing__step + .landing__step {
+    margin-top: 10px;
+}
+
+.landing__step-num {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 999px;
+    background: var(--ios-blue);
+    color: #fff;
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.landing__step-title {
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.landing__step-text {
+    margin: 4px 0 0;
+    font-size: 13px;
+    line-height: 19px;
+    color: var(--ios-gray);
+    overflow-wrap: anywhere;
+}
+
+.landing code {
+    font-family: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, monospace;
+    font-size: 0.92em;
+    padding: 1px 5px;
+    border-radius: 5px;
+    background: rgba(120, 120, 128, 0.12);
+    color: var(--ios-text);
+}
+
+.landing a {
+    color: var(--ios-blue);
+    text-decoration: none;
+}
+
+.landing a:active {
+    opacity: 0.4;
+}
+
+.landing__more {
+    margin: 16px 0 0;
+    font-size: 13px;
+    color: var(--ios-gray);
+    text-align: center;
+}
+
+/* One-click /init binding card for the owner of this deployment. */
+.landing__bind {
+    padding: 16px;
+    background: var(--ios-surface);
+    border: 0.5px solid var(--ios-separator);
+    border-radius: 16px;
+}
+
+.landing__bind-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.landing__bind-row > div:first-child {
+    flex: 1 1 260px;
+}
+
+/* Button resets: the same tokens style both <a> and <button> variants. */
+.landing .landing__button--bind {
+    flex: 0 0 auto;
+    min-width: 108px;
+    border: 0;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.landing .landing__button--bind:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.landing__bind-status {
+    margin: 12px 0 0;
+    font-size: 13px;
+    line-height: 18px;
+    overflow-wrap: anywhere;
+}
+
+.landing__bind-status--ok {
+    color: #34c759;
+}
+
+.landing__bind-status--error {
+    color: #ff3b30;
+}
+
+.landing__footer {
+    padding: 36px 0 48px;
+    font-size: 13px;
+    line-height: 22px;
+    color: var(--ios-gray);
+    text-align: center;
+}
+
+.landing__notice {
+    margin-bottom: 16px;
+    padding: 12px 16px;
+    background: var(--ios-surface);
+    border: 0.5px solid var(--ios-separator);
+    border-radius: 12px;
+    text-align: left;
+}
+
+/* ------------------------------------------------------------- login page */
+
+/* Shown outside Telegram when the worker accepts the web password. Rendered
+   outside the KonstaApp shell, so it styles itself with the same tokens. */
+.login {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: var(--ios-grouped-bg);
+    color: var(--ios-text);
+}
+
+.login__card {
+    width: min(360px, 100%);
+    padding: 28px 24px 20px;
+    background: var(--ios-surface);
+    border: 0.5px solid var(--ios-separator);
+    border-radius: 16px;
+}
+
+.login__brand {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+    color: var(--ios-gray);
+    text-transform: uppercase;
+}
+
+.login__title {
+    margin: 8px 0 6px;
+    font-size: 28px;
+    line-height: 34px;
+    font-weight: 700;
+    letter-spacing: -0.4px;
+}
+
+.login__hint {
+    margin: 0 0 20px;
+    font-size: 14px;
+    line-height: 20px;
+    color: var(--ios-gray);
+}
+
+.login__hint code {
+    font-size: 12px;
+    padding: 1px 5px;
+    background: rgba(120, 120, 128, 0.12);
+    border-radius: 5px;
+}
+
+.login__input {
+    width: 100%;
+    height: 44px;
+    padding: 0 14px;
+    background: var(--ios-grouped-bg);
+    border: 0.5px solid var(--ios-separator);
+    border-radius: 12px;
+    color: var(--ios-text);
+    font: inherit;
+    font-size: 16px;
+    outline: none;
+}
+
+.login__input:focus {
+    border-color: var(--ios-blue);
+}
+
+.login__error {
+    margin: 12px 0 0;
+    font-size: 13px;
+    line-height: 18px;
+    color: #ff3b30;
+}
+
+.dark .login__error {
+    color: #ff453a;
+}
+
+.login__button {
+    width: 100%;
+    height: 44px;
+    margin-top: 16px;
+    border-radius: 12px;
+    background: var(--ios-blue);
+    color: #fff;
+    font: inherit;
+    font-size: 16px;
+    font-weight: 600;
+    transition: opacity 0.15s ease;
+}
+
+.login__button:active {
+    opacity: 0.55;
+}
+
+.login__button:disabled {
+    opacity: 0.4;
+}
+
+.login__landing-link {
+    display: block;
+    margin-top: 16px;
+    color: var(--ios-blue);
+    font-size: 13px;
+    text-align: center;
+    text-decoration: none;
+}
+
+.login__landing-link:active {
+    opacity: 0.4;
+}
+
+/* Positioned container so the compose FAB can hover over the list. */
+.compose-anchor {
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Floating "new message" button over the mail list, iOS Mail style. */
+.compose-fab {
+    position: absolute;
+    z-index: 20;
+    right: 16px;
+    bottom: calc(16px + var(--k-safe-area-bottom, env(safe-area-inset-bottom, 0px)));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 52px;
+    height: 52px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--ios-blue);
+    color: #fff;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28);
+    transition:
+        opacity 0.15s ease,
+        transform 0.15s ease;
+}
+
+.compose-fab:active {
+    opacity: 0.75;
+    transform: scale(0.96);
+}
+
+/* Split layout only: keep the FAB clear of the Settings footer. */
+.compose-fab--lifted {
+    bottom: calc(84px + var(--k-safe-area-bottom, env(safe-area-inset-bottom, 0px)));
+}
+
+/* --------------------------------------------------------------- compose */
+
+.compose {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--ios-surface);
+}
+
+.compose__bar {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    border-bottom: 0.5px solid var(--ios-separator);
+}
+
+.compose__fields {
+    flex: 0 0 auto;
+    background: var(--ios-surface);
+}
+
+.compose__row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 44px;
+    padding: 0 16px;
+}
+
+.compose__row + .compose__row {
+    border-top: 0.5px solid var(--ios-separator);
+}
+
+.compose__label {
+    flex: 0 0 auto;
+    width: 72px;
+    font-size: 16px;
+    color: var(--ios-gray);
+}
+
+.compose__input {
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 44px;
+    border: 0;
+    background: none;
+    color: var(--ios-text);
+    font: inherit;
+    font-size: 16px;
+    outline: none;
+}
+
+.compose__input::placeholder {
+    color: var(--ios-gray-2);
+}
+
+.compose__body {
+    flex: 1 1 auto;
+    min-height: 0;
+    width: 100%;
+    padding: 12px 16px;
+    border: 0;
+    border-top: 0.5px solid var(--ios-separator);
+    background: var(--ios-surface);
+    color: var(--ios-text);
+    font: inherit;
+    font-size: 16px;
+    line-height: 1.5;
+    resize: none;
+    outline: none;
+}
+
+.compose__body::placeholder {
+    color: var(--ios-gray-2);
+}
+
+.compose__attachments {
+    flex: 0 0 auto;
+    padding: 4px 12px calc(10px + var(--k-safe-area-bottom, env(safe-area-inset-bottom, 0px)));
+    border-top: 0.5px solid var(--ios-separator);
+}
+
+.compose__files {
+    display: flex;
+    flex-direction: column;
+}
+
+.compose__file {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 36px;
+    padding: 4px 4px;
+    color: var(--ios-text);
+    font-size: 14px;
+}
+
+.compose__file + .compose__file {
+    border-top: 0.5px solid var(--ios-separator);
+}
+
+.compose__file-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.compose__file-size {
+    flex: 0 0 auto;
+    color: var(--ios-gray);
+    font-size: 13px;
+}
+
+.compose__file-remove {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 0;
+    border-radius: 999px;
+    background: rgba(120, 120, 128, 0.16);
+    color: var(--ios-gray);
+    cursor: pointer;
+}
+
+.compose__add {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    padding: 8px 4px;
+}
+
+.compose__error {
+    position: absolute;
+    inset-inline: 16px;
+    bottom: calc(56px + var(--k-safe-area-bottom, env(safe-area-inset-bottom, 0px)));
+    z-index: 10;
+    padding: 10px 14px;
+    border-radius: 12px;
+    background: rgba(28, 28, 30, 0.9);
+    color: #fff;
+    font-size: 13px;
+    line-height: 1.4;
+    text-align: center;
+    overflow-wrap: anywhere;
+}
+
+.dark .compose__error {
+    background: rgba(58, 58, 60, 0.95);
+}
+
+/* ------------------------------------------------------------- reduced motion */
+
+/* Gestures stay fully functional; only the decorative settle animations are
+   dropped for users who ask the system to reduce motion. */
+@media (prefers-reduced-motion: reduce) {
+    .swipe-row__content:not(.swipe-row__content--dragging),
+    .ptr-content:not(.ptr-content--dragging),
+    .ptr-spinner--settle,
+    .ptr-spinner__icon,
+    .ios-tabbar__item,
+    .ios-menu,
+    .bar-button,
+    .compose-fab,
+    .k-list-item .settings-remove {
+        transition: none;
+    }
+
+    .ios-menu {
+        animation: none;
+    }
+}

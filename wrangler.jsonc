@@ -1,0 +1,66 @@
+// Public worker configuration for mail2telegram.
+//
+// This file is tracked in git and intentionally contains no secrets and no real
+// resource ids, so every deployment can use the same copy:
+//   - Runtime variables (TELEGRAM_ID, TELEGRAM_TOKEN) are configured
+//     under Workers & Pages → your worker → Settings → Variables and Secrets.
+//     `keep_vars` below stops a deploy from deleting them. DOMAIN is
+//     optional: when unset, /init discovers the worker host and stores it
+//     in D1.
+//   - D1 / R2 use provisionable placeholders, so a Deploy to Cloudflare button
+//     creates the resources and writes the real ids back. Manual deploys pass
+//     DEPLOY_* build variables to scripts/build-config.mjs, which writes them
+//     to the gitignored wrangler.deploy.jsonc instead of editing this file.
+// Local development values (TELEGRAM_TOKEN, RESEND_API_KEY, …) go in the
+// gitignored `.dev.vars`.
+{
+    "$schema": "./node_modules/wrangler/config-schema.json",
+    "name": "mail2telegram",
+    "main": "packages/server/src/index.ts",
+    // From this date Workers enables nodejs_compat and nodejs_compat_v2 by
+    // default, so no compatibility_flags are needed — adding them would be
+    // redundant and is discouraged by Cloudflare.
+    "compatibility_date": "2026-08-04",
+    // Without this Wrangler treats the config as the only source of truth and
+    // deletes variables/secrets set in the dashboard on the next deploy.
+    "keep_vars": true,
+    // Daily cron that deletes mail older than the auto cleanup retention
+    // (Settings → Mail Handling → Auto Cleanup, 0 disables it).
+    "triggers": {
+        "crons": ["0 3 * * *"]
+    },
+    // The frontend SPA built by Vite into packages/web/dist/client.
+    // API and webhook routes are handled by the Worker first.
+    "assets": {
+        "directory": "./packages/web/dist/client",
+        "not_found_handling": "single-page-application",
+        "run_worker_first": [
+            "/api/*",
+            "/init",
+            "/email/*",
+            "/telegram/*"
+        ]
+    },
+    // Provisionable defaults: an empty D1 id means "create this database", and
+    // the concrete bucket name is what a Deploy to Cloudflare button creates
+    // and binds. scripts/build-config.mjs turns them into the real ids in the
+    // gitignored wrangler.deploy.jsonc, or keeps the ids the button wrote back.
+    // Migrations are read from packages/server/migrations.
+    "d1_databases": [
+        {
+            "binding": "DB",
+            "database_name": "mail2telegram",
+            "database_id": "86b804ca-2368-491b-8369-c747da92aff3",
+            "migrations_dir": "packages/server/migrations"
+        }
+    ],
+    "r2_buckets": [
+        {
+            "binding": "BUCKET",
+            "bucket_name": "mail2telegram","preview_bucket_name": "mail2telegram"
+        }
+    ],
+    "ai": {
+        "binding": "AI"
+    }
+}

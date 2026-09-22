@@ -1,0 +1,69 @@
+{
+    "name": "mail2telegram",
+    "type": "module",
+    "version": "2.0.0",
+    "description": "Forward email to telegram with a Telegram Mini App inbox",
+    "author": "TBXark",
+    "license": "MIT",
+    "homepage": "https://github.com/TBXark/mail2telegram",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/TBXark/mail2telegram"
+    },
+    "cloudflare": {
+        "label": "mail2telegram",
+        "products": [
+            "Workers",
+            "D1",
+            "R2"
+        ],
+        "docs_url": "https://github.com/TBXark/mail2telegram#readme",
+        "bindings": {
+            "TELEGRAM_TOKEN": {
+                "description": "Telegram bot token from [@BotFather](https://t.me/BotFather) (`/newbot`)."
+            },
+            "TELEGRAM_ID": {
+                "description": "Destination chat ids, comma separated. Get yours from [@userinfobot](https://t.me/userinfobot). Groups start with `-100`."
+            },
+            "WEB_PASSWORD": {
+                "description": "Optional password for opening the Mini App in a plain browser outside Telegram. Leave empty to allow only the Telegram Mini App."
+            },
+            "RESEND_API_KEY": {
+                "description": "Optional [Resend](https://resend.com/docs/introduction) API key. Enables replying to and composing email from Telegram or the Mini App."
+            },
+            "OPENAI_API_KEY": {
+                "description": "Optional OpenAI-compatible API key used as the default summary backend. Can also be set later in the Mini App settings."
+            }
+        }
+    },
+    "private": true,
+    "packageManager": "pnpm@11.11.0",
+    "scripts": {
+        "dev": "concurrently -k -n web,worker -c cyan,magenta \"pnpm dev:web\" \"pnpm dev:worker\"",
+        "dev:web": "pnpm --filter @mail2telegram/web dev",
+        "dev:worker": "wrangler dev",
+        "typecheck": "tsc --noEmit -p packages/shared/tsconfig.json && tsc --noEmit -p packages/server/tsconfig.json && tsc --noEmit -p packages/server/tsconfig.test.json && tsc --noEmit -p packages/web/tsconfig.json",
+        "build": "pnpm typecheck && pnpm --filter @mail2telegram/web build",
+        "build:web": "pnpm --filter @mail2telegram/web build",
+        "deploy:config": "node scripts/build-config.mjs",
+        "db:migrate:local": "wrangler d1 migrations apply DB --local",
+        "db:migrate:remote": "node scripts/build-config.mjs && wrangler d1 migrations apply DB --remote --config wrangler.deploy.jsonc",
+        "deploy": "node scripts/build-config.mjs && wrangler d1 migrations apply DB --remote --config wrangler.deploy.jsonc && pnpm --filter @mail2telegram/web build && wrangler deploy --config wrangler.deploy.jsonc",
+        "screenshots": "pnpm --filter @mail2telegram/web screenshots",
+        "lint": "oxlint",
+        "lint:fix": "oxlint --fix",
+        "format": "oxfmt",
+        "format:check": "oxfmt --check",
+        "test": "pnpm test:unit && pnpm test:pool",
+        "test:unit": "pnpm --filter @mail2telegram/server test:unit",
+        "test:pool": "pnpm --filter @mail2telegram/server test:pool",
+        "wrangler": "wrangler"
+    },
+    "devDependencies": {
+        "concurrently": "^10.0.5",
+        "oxfmt": "^0.67.0",
+        "oxlint": "^1.82.0",
+        "typescript": "^7.0.2",
+        "wrangler": "^4.131.2"
+    }
+}

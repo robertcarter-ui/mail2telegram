@@ -1,0 +1,21 @@
+# Workers Builds runs an older pnpm than the build log reports (an install
+# fails with "packages field missing or empty" on a settings-only file, which
+# only pnpm <=10.0 emits). This file is therefore kept parseable by old pnpm:
+# `packages` is mandatory, and `overrides` must stay out of it -- old pnpm
+# reads overrides from package.json, so a workspace-level `overrides` makes the
+# frozen-install check fail with ERR_PNPM_LOCKFILE_CONFIG_MISMATCH.
+# Four members: the deployable worker config stays at the repo root, while the
+# server, Mini App and the shared wire contract are workspace packages.
+packages:
+  - "packages/*"
+
+# Published within the release-age window, so pinning it needs an explicit
+# bypass. Scope this to the exact version: the exclusion must be dropped once
+# the version ages past the cutoff, and re-added for the next fresh bump.
+minimumReleaseAgeExclude:
+  - '@cloudflare/workers-types@5.20260915.1'
+
+allowBuilds:
+  esbuild: true
+  puppeteer: true
+  workerd: true

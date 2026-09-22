@@ -1,0 +1,20 @@
+{
+    "extends": "../../tsconfig.json",
+    "compilerOptions": {
+        // Worker source only. `@cloudflare/workers-types` already declares the
+        // whole Web platform surface this runtime provides (fetch, Response,
+        // Request, streams, crypto, ...), so also pulling in the DOM lib
+        // declares every one of those globals a second time. Colliding
+        // declarations are then resolved arbitrarily, which silently gives our
+        // own code inconsistent globals -- `Buffer` degrades to `any` while
+        // `setTimeout` still returns the browser's `number`. Staying free of
+        // both `DOM` and `@types/node` is what keeps the globals unambiguous.
+        "lib": ["ESNext"],
+        "types": ["@cloudflare/workers-types"]
+    },
+    // Tests are compiled by tsconfig.test.json: this program is worker runtime
+    // code, while the suite needs Node types. Excluding it here is what keeps
+    // the worker program free of the `@types/node` that vitest/miniflare drag in.
+    "include": ["src"],
+    "exclude": ["src/**/*.test.ts", "src/test.ts"]
+}

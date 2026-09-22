@@ -1,0 +1,47 @@
+{
+    "$schema": "./node_modules/oxlint/configuration_schema.json",
+    "plugins": [
+        "react",
+        "unicorn",
+        "typescript",
+        "oxc",
+        "import",
+        "vitest"
+    ],
+    "categories": {
+        "correctness": "error",
+        "suspicious": "warn",
+        "perf": "warn"
+    },
+    "rules": {
+        // React 17+ automatic JSX runtime: no React import needed in scope.
+        "react/react-in-jsx-scope": "off",
+        // oxc's rule targets Express async handlers; this worker uses
+        // itty-router, whose `fetch` awaits every handler and has its own catch.
+        "oxc/no-async-endpoint-handlers": "off",
+        // Side-effect imports (styles, polyfill, test aggregation) are intended.
+        "import/no-unassigned-import": "off",
+        // Sequential awaits in the batched D1 helpers are deliberate: each chunk
+        // must commit before the next, and D1 rejects unbounded fan-out.
+        "no-await-in-loop": "off",
+        // Destructuring-away keys while collecting the rest is a real pattern.
+        "no-unused-vars": ["error", { "ignoreRestSiblings": true }],
+        // The React Compiler rules below landed after this codebase was written
+        // and are off to keep parity with the previous ESLint setup, which never
+        // enabled them. The existing patterns they flag -- latest-ref assignment,
+        // setState inside effects, manual memoization -- are intentional here.
+        // Enable individually to adopt them.
+        "react/set-state-in-effect": "off",
+        "react/refs": "off",
+        "react/preserve-manual-memoization": "off",
+        "react/exhaustive-effect-dependencies": "off",
+        // Effect dependency arrays are curated by hand and deliberately partial.
+        "react-hooks/exhaustive-deps": "off"
+    },
+    "ignorePatterns": [
+        "dist/**",
+        "build/**",
+        ".wrangler/**",
+        "node_modules/**"
+    ]
+}
